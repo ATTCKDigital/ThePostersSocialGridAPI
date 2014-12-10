@@ -109,24 +109,7 @@ rank = function(conf_obj)
        data=new_data;
      }
   //make unique
-  var dictionary_={};
-  var data_temp = [];
-  console.log("unique...");
-  for(var i=0; i < data.length; i++ )
-  {
-    console.log(" "+i+" -->"+data[i].type+"."+data[i].id);
-     if(dictionary_[data[i].type+"."+data[i].id] && dictionary_[data[i].type+"."+data[i].id]=="true" )
-       {
-         console.log("Not pushing duplicate....");
-         continue;
-         
-       } 
-          dictionary_[data[i].type+"."+data[i].id]="true";
-          data_temp.push(data[i]);
  
-     
-  }
-  data=data_temp;
   //sort
     console.log("Sorting ... ");
    data.sort(function(tweet1,tweet2){
@@ -138,21 +121,12 @@ rank = function(conf_obj)
                                  } 
                                  return d2-d1;
                             });
-    var LOAD_WEIGHT_HASHTAG = 10000000000000;
-  var LOAD_WEIGHT_MEDIA= 10000000000;
-  var LOAD_WEIGHT_TEXT=  100000000;
+    var LOAD_WEIGHT_HASHTAG = 10000000000000; 
   var rank_value_date=data.length;
  
   data.forEach(function(tweet){
         tweet.ranking =rank_value_date;
-        if(tweet.text_str)
-        {   
-            tweet.ranking=tweet.ranking+LOAD_WEIGHT_TEXT;    
-        }
-        if(tweet.media)
-        {  
-           tweet.ranking=tweet.ranking+(LOAD_WEIGHT_MEDIA*tweet.media.length );
-        }
+         
         if(tweet.hashtags && hashtag_array)
         { 
        
@@ -290,9 +264,22 @@ search_social_media = function(db_handle, client,  count_, hashes_)
       // console.log("Media Item Array :: Search :: "+JSON.stringify(media_item_array_));
                             var conf_obj = {data: media_item_array_ , date_sort_asc: false,  hashtags: hashes_, rank_sort_asc: false};
          
-                            rank(conf_obj).then(function(data_ranked){ 
-                                console.log("Data Ranked is "+JSON.stringify(data_ranked));
-                              deferred.resolve(media_item_array_); 
+                            rank(conf_obj).then(function(data_ranked){  
+                               var dictionary_={};
+                                var data_temp = [];
+                                for(var i=0; i < media_item_array_.length; i++ )
+                                {
+                                   if(dictionary_[media_item_array_[i].type+"."+media_item_array_[i].id] && dictionary_[media_item_array_[i].type+"."+media_item_array_[i].id]==true)
+                                     {
+                                       console.log("Removing duplicate "+media_item_array_[i].id);
+                                       continue;
+                                     } 
+                                    dictionary_[media_item_array_[i].type+"."+media_item_array_[i].id]=true;
+                                  data_temp.push(media_item_array_[i]);
+                                }
+                              
+                              
+                              deferred.resolve(data_temp); 
                            }); 
                            
                       }); 
