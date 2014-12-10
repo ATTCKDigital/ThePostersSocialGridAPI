@@ -114,14 +114,14 @@ rank = function(conf_obj)
   console.log("unique...");
   for(var i=0; i < data.length; i++ )
   {
-    console.log(" "+i+" -->");console.log(data[i].id);
-     if(dictionary_[data[i].id] && dictionary_[data[i].id]=="true" )
+    console.log(" "+i+" -->"+data[i].type+"."+data[i].id);
+     if(dictionary_[data[i].type+"."+data[i].id] && dictionary_[data[i].type+"."+data[i].id]=="true" )
        {
          console.log("Not pushing duplicate....");
          continue;
          
        } 
-          dictionary_[data[i].id]="true";
+          dictionary_[data[i].type+"."+data[i].id]="true";
           data_temp.push(data[i]);
  
      
