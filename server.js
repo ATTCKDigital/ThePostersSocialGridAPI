@@ -116,25 +116,14 @@ rank = function(conf_obj)
                                  return d2-d1;
                             });
   var LOAD_WEIGHT_HASHTAG = 10000000000000;
-  var LOAD_WEIGHT_MEDIA= 10000000000;
-  var LOAD_WEIGHT_TEXT=  100000000;
   var rank_value_date=data.length;
  
   data.forEach(function(tweet){ 
         tweet.ranking =rank_value_date;
-        if(tweet.text_str)
-        {   
-            tweet.ranking=tweet.ranking+LOAD_WEIGHT_TEXT;    
-        } 
-        if(tweet.media)
-        {  
-           tweet.ranking=tweet.ranking+(LOAD_WEIGHT_MEDIA*tweet.media.length );
-        } 
         if(tweet.hashtags && hashtag_array)
         { 
        
           var intersection_ = _.intersection(tweet.hashtags,hashtag_array);
- 
           tweet.matching_hashtags=intersection_; 
           tweet.ranking=tweet.ranking+(LOAD_WEIGHT_HASHTAG*tweet.matching_hashtags.length);   
         } 
@@ -295,7 +284,7 @@ router.get('/socialmedia/tweets/find/:tweets', function(req, res) {
  var saved_hash_arr_=[];
     var tweets_ = req.params.tweets;
     var array_values_ = tweets_.split(",");
-   saved_hash_arr_.push(s_twitter.find_selected_tweets(array_values_,req.db));
+   saved_hash_arr_.push(utils.find_selected(array_values_,'twitter',req.db));
     Q.all(saved_hash_arr_).then(function(ful){
       res.jsonp({ message: ' saved tweets', hashes: ful });	
     });
@@ -304,8 +293,8 @@ router.get('/socialmedia/data/find/:vals', function(req, res) {
  var saved_hash_arr_=[];
     var vals_ = req.params.vals;
     var array_values_ = vals_.split(",");
-   saved_hash_arr_.push(s_twitter.find_selected_tweets(array_values_,req.db));
-   saved_hash_arr_.push(s_instagram.find_selected_igs(array_values_,req.db));
+   saved_hash_arr_.push(utils.find_selected(array_values_,'twitter',req.db));
+   saved_hash_arr_.push(utils.find_selected(array_values_,'instagram',req.db));
     Q.all(saved_hash_arr_).then(function(ful){
       res.jsonp({ message: ' saved data ', hashes: ful });	
     });
@@ -314,14 +303,14 @@ router.get('/socialmedia/instagrams/find/:instagrams', function(req, res) {
  var saved_hash_arr_=[];
     var instagrams_ = req.params.instagrams;
     var array_values_ = instagrams_.split(",");
-   saved_hash_arr_.push(s_instagram.find_selected_igs(array_values_,req.db));
+   saved_hash_arr_.push(utils.find_selected(array_values_,'instagram',req.db));
     Q.all(saved_hash_arr_).then(function(ful){
       res.jsonp({ message: ' saved instagrams', hashes: ful });	
     });
 });
 router.get('/socialmedia/tweets/find/all', function(req, res) {
  var saved_hash_arr_=[];
-   saved_hash_arr_.push(s_twitter.find_all_tweets(req.db));
+   saved_hash_arr_.push(utils.find_all_tweets(req.db));
     Q.all(saved_hash_arr_).then(function(ful){
       res.jsonp({ message: ' saved tweets', hashes: ful });	
     });
@@ -334,8 +323,7 @@ router.get('/socialmedia/hash/remove/:hash', function(req,res){
       res.jsonp(ful);
   });
 });
-router.get('/socialmedia/:hashes', function(req,res){
-//   res.json({message:'twitter default message'});
+router.get('/socialmedia/:hashes', function(req,res){ 
   console.log(application_context+'/socialmedia'); 
   var date_sort_asc_=false;
   var rank_sort_asc_=false;

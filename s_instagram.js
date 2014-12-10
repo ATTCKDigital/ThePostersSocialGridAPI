@@ -8,7 +8,8 @@ ig.use({ client_id: '5b48709500c443c7bcfa190149322a70',
 exports.reformatHashIg = function(original_hash)
 {
   var new_hash = original_hash;
-  if(new_hash && new_hash.length>0){
+  if(new_hash && new_hash.length>0)
+  {
       if(new_hash.indexOf("#")>-1)
         {
           new_hash = new_hash.substr(new_hash.indexOf("#")+1);
@@ -17,154 +18,7 @@ exports.reformatHashIg = function(original_hash)
   }
   return new_hash;
 }
-
-
-
-
-exports.find_all_igs = function(db_handle){
-  console.log("find_all_igs::");
-  var deferred = Q.defer();
-  s_mongo_util.find_all_hashes(db_handle).then(function(hashtags){
-      if(hashtags && hashtags.length>0){
-          var r_hashtags=[];
-          hashtags.forEach(function(t_){
-              r_hashtags.push(s_mongo_util.reformatHash(t_.hash));
-            
-          });
-          
-          exports.find_selected_igs(r_hashtags,db_handle).then(function(igs_){
-              deferred.resolve(igs_);
-          });  
-      }
-    else{
-      deferred.resolve([]);
-    }
-      
-  });
-  return deferred.promise;
-}
-exports.find_selected_igs = function(ig,db_handle){
-  console.log("find_selected_igs::"+JSON.stringify(ig));
-  if(ig && ig.length==1 && ig[0]=='all')
-  {
-    return exports.find_all_igs(db_handle);
-  }
-  else
-  {
     
-  var deferred = Q.defer();
-  var tweet_value_regexp=[]
-  if(ig&&ig.length>0)
-    {
-      var all_items=[];
-        ig.forEach(function(item){
-          var ig_key='instagram.'+item;
-          var collection = db_handle.get(ig_key);
-          console.log("Searching instagram "+ig_key );
-          collection.find({},function(err,items){
-              items.forEach(function(item_){
-                all_items.push(item_);
-              })
-          }).then(function(){
-              
-               deferred.resolve(all_items);
-          });
-         
-       });
-    }
-  
-  return deferred.promise;
-  }
-
-}
-
-exports.find_all_ig = function(db_handle){
-  var deferred = Q.defer();
-   var collection = db_handle.get('instagram');
-    collection.find({},function(err,items){
-            console.log("Find_all_instagram");
-      if(items && items.length > 0){
-          console.log("instagram items found "+items.length);
-      }
-            deferred.resolve(items);
-       }); 
-  return deferred.promise;
-}
-exports.find_selected_instagram = function(hashtag, db_handle)
-{
-   var deferred = Q.defer();
-  if(hashtag)
-   {
-          var instagram_key = "instagram."+hashtag;
-           var collection = db_handle.get(instagram_key);
-           console.log("Searching "+instagram_key);
-           collection.find({},function(err,items){
-            console.log("Find_all_tweets");
-            if(items && items.length > 0){
-                console.log("Items found "+items.length);
-             
-            }
-            else{
-              console.log("No items found "+ instagram_key);
-                
-            }
-              deferred.resolve(items);
-           }); 
-           
-     
-   }
-    return deferred.promise;
-}
-exports.find_selected_instagrams = function(hashtags, db_handle)
-{
-      var deferred = Q.defer();
-      var ig_searches = [];
-//   exports.find_selected_instagram
-    if(hashtags && hashtags.length>0)
-     {
-       hashtags.forEach(function(tag) {
-               ig_searches.push(exports.find_selected_instagram(tag,db_handle));          
-      });
-       Q.all(ig_searches).then(function(instagrams){
-         console.log("find_selected_instagrams::instagrams returned -->"+instagrams.length);
-         deferred.resolve(instagrams);
-       });
-     } 
-  return deferred.promise;  
-}
-exports.find_selected_igs = function(instagram_value,db_handle){
-  if(instagram_value && instagram_value.length==1 && instagram_value[0]=='all')
-  {
-    return exports.find_all_ig(db_handle);
-  }
-  else
-  {
-      console.log("Find Instagrams "+JSON.stringify(instagram_value));
-  var deferred = Q.defer();
-  var ig_value_regexp=[]
-  if(instagram_value && instagram_value.length>0)
-    { 
-        instagram_value.forEach(function(item){
-        ig_value_regexp.push({"tags":{"$regex":item , "$options":'i'}});
-      });
-    }
-    console.log("Regexp value  " +JSON.stringify(ig_value_regexp));
-   var collection = db_handle.get('instagram');
- 
-  collection.find({  "$and" :
-                     [ 
-                       {"tags":{"$exists": true }  },
-                       {"tags.0":{"$exists": true } },
-                       {"$or":ig_value_regexp }
-                     ]
-                  },function(err,items){
-            deferred.resolve(items);
-       }); 
-  
-  return deferred.promise;
-  }
-
-}
 exports.search_db_ig=function(cnt,hashtags,db_handle)
 {
    console.log("search_db_ig");
@@ -174,9 +28,8 @@ exports.search_db_ig=function(cnt,hashtags,db_handle)
       var ht_r =[] ;
         hashtags.forEach(function(tag){
              ht_r.push(tag.substr(1));    
-        }); 
-        //exports.find_selected_igs(ht_r,db_handle)
-        exports.find_selected_instagrams(ht_r,db_handle).then(function(mongo_data){ 
+        });  
+        s_mongo_util.find_selected(ht_r,'instagram',db_handle).then(function(mongo_data){ 
                         console.log("Instagram Mongo Data returned.");
                   
                             deferred.resolve(mongo_data); 
@@ -299,10 +152,6 @@ exports.transform_ig=function(hashtags,post)
     console.log("transform_ig - > No tweet found.") ;   
   }
   return deferred.promise;
-}
-exports.insert_post=function(instagram_post,hashtags,max_rollover,db_handle)
-{
-  
 }
 
 exports.search_multiple_ig=function(cnt, hashtags,db_handle)

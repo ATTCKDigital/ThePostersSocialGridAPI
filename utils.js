@@ -174,6 +174,63 @@ exports.get_instagram_channel=function(hash){
       } 
     return channel;
 }
+exports.find_all  = function(type,db_handle)
+{
+   console.log("find_all::");
+  var deferred = Q.defer();
+  exports.find_all_hashes(db_handle).then(function(hashtags){
+      if(hashtags && hashtags.length>0){
+          var r_hashtags=[];
+          hashtags.forEach(function(t_){
+              r_hashtags.push(exports.reformatHash(t_.hash));
+            
+          });
+          
+          exports.find_selected(r_hashtags,type ,db_handle).then(function(messages){
+              deferred.resolve(messages);
+          });  
+      }
+    else{
+      deferred.resolve([]);
+    }
+      
+  });
+  return deferred.promise;
+}
+exports.find_selected  = function(hashes,type,db_handle)
+{
+  console.log("find_selected::"+JSON.stringify(hashes));
+  if(hashes && hashes.length==1 && hashes[0]=='all')
+  {
+    return exports.find_all(type,db_handle);
+  }
+  else
+  {
+      var deferred = Q.defer(); 
+      if(hashes && hashes.length>0)
+      {
+          var all_items=[];
+            hashes.forEach(function(item)
+            {
+              var  _key=type+'.'+item;
+              var collection = db_handle.get(_key);
+              console.log("Searching "+type+" "+_key );
+              collection.find({},function(err,items){
+                  items.forEach(function(item_){
+                    all_items.push(item_);
+                  })
+              }).then(function(){
+
+                   deferred.resolve(all_items);
+              });
+
+           });
+        }
+
+      return deferred.promise;
+  }
+
+}
 exports.find_all_hashes=function(db_handle, hashes_)
 {
   var deferred = Q.defer();//promise to return all data.

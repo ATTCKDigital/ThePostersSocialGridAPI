@@ -114,66 +114,6 @@ exports.transform_hashtags=function(tweet,json_obj)
   return deferred.promise;
 }
 
-exports.find_all_tweets = function(db_handle){
-  console.log("find_all_tweets::");
-  var deferred = Q.defer();
-  s_mongo_util.find_all_hashes(db_handle).then(function(hashtags){
-      if(hashtags && hashtags.length>0){
-          var r_hashtags=[];
-          hashtags.forEach(function(t_){
-              r_hashtags.push(s_mongo_util.reformatHash(t_.hash));
-            
-          });
-          
-          exports.find_selected_tweets(r_hashtags,db_handle).then(function(tweets){
-              deferred.resolve(tweets);
-          });  
-      }
-    else{
-      deferred.resolve([]);
-    }
-      
-  });
-  return deferred.promise;
-}
-exports.find_selected_tweets = function(tweet_value,db_handle){
-  console.log("find_selected_tweets::"+JSON.stringify(tweet_value));
-  if(tweet_value && tweet_value.length==1 && tweet_value[0]=='all')
-  {
-    return exports.find_all_tweets(db_handle);
-  }
-  else
-  {
-    
-  var deferred = Q.defer();
-  var tweet_value_regexp=[]
-  if(tweet_value&&tweet_value.length>0)
-    {
-      var all_items=[];
-        tweet_value.forEach(function(item){
-          var twitter_key='twitter.'+item;
-          var collection = db_handle.get(twitter_key);
-          console.log("Searching twitter "+twitter_key );
-          collection.find({},function(err,items){
-              items.forEach(function(item_){
-                all_items.push(item_);
-              })
-          }).then(function(){
-              
-               deferred.resolve(all_items);
-          });
-         
-       });
-    }
-  
-  return deferred.promise;
-  }
-
-}
-
-
-
-
 
 
 exports.transform_tweets_np=function(hashtags,tweet)
@@ -364,7 +304,7 @@ exports.search_db=function(cnt,hashtags,db_handle)
         hashtags.forEach(function(tag){
              ht_r.push(tag.substr(1));    
         }); 
-        exports.find_selected_tweets(ht_r,db_handle).then(function(mongo_data){ 
+        s_mongo_util.find_selected(ht_r,'twitter',db_handle).then(function(mongo_data){ 
                         console.log("Mongo Data returned.");
                   
                             deferred.resolve(mongo_data); 
