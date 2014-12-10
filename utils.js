@@ -1,6 +1,6 @@
 var mubsub = require('mubsub');
 var client = mubsub('mongodb://tpapi:tpapi@linus.mongohq.com:10002/app29194626');
-var MONGO_MAX_SIZE=5000000;
+var MONGO_MAX_SIZE=2500000;
 var MONGO_MAX_MSGS=5000;
 var Q =          require('q');
 var MONGO_CHANNELS={};
