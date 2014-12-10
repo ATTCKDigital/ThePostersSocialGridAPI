@@ -81,13 +81,16 @@ exports.search_ig=function( cnt , hashtag  )
 }
 exports.transform_ig=function(hashtags,post)
 {
-   console.log("transform_ig");
   var json_obj = {};
   var media_array=[];
   var used_hashtags =[];
   var deferred = Q.defer();  
   if(post && (!post.dummy))
   {   
+    if(post && post.message)
+    {
+      post = post.message;
+    }
        
            json_obj.gen_url= post.link; 
           if(post.created_time)
@@ -145,7 +148,7 @@ exports.transform_ig=function(hashtags,post)
                          } 
                           json_obj.media.push(media_item_);                 
             } 
-      deferred.resolve(json_obj); 
+       deferred.resolve(json_obj); 
     } 
   else
   {
@@ -179,8 +182,17 @@ exports.search_multiple_ig=function(cnt, hashtags,db_handle)
                if(ig && ig.length>0)
                { 
                  ig.forEach(function(instagram_){
+                 
                    if(instagram_._id){ 
-                     mongo_aa[instagram_.id]=instagram_;
+                    
+                     if(instagram_.message)
+                     {
+                         mongo_aa[instagram_.message.id]=instagram_;
+                      }
+                      else if(instagram_.id)
+                      {
+                          mongo_aa[instagram_.id]=instagram_;
+                      }
                    }
                    else{
                      console.log("Instagram non-mongo item ");
@@ -212,9 +224,7 @@ exports.search_multiple_ig=function(cnt, hashtags,db_handle)
                                { 
                                  
                                  if(!instagram_.dummy)
-                                   {
-                                     console.log("Inserting instagram pushing "+instagram_.id);
-                                
+                                   {  
                                      s_mongo_util.insert_instagram(  hashtags, instagram_ );
                                      queue_of_parse_tasks.push(  exports.transform_ig(hashtags,instagram_)  );
                                    }
