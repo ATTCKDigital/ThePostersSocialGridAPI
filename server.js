@@ -89,6 +89,9 @@ rank = function(conf_obj)
    var deferred = Q.defer();//promise to return all data.
    if(data.length>0 && (!data[0].gen_url))
      {
+       //make unique
+       
+       //rank and sort
        var new_data=[];
        data.forEach(function(d){ 
            if(d && d.id)
@@ -105,6 +108,26 @@ rank = function(conf_obj)
        });
        data=new_data;
      }
+  //make unique
+  var dictionary_={};
+  var data_temp = [];
+  console.log("unique...");
+  for(var i=0; i < data.length; i++ )
+  {
+    console.log(" "+i+" -->");console.log(data[i].id);
+     if(dictionary_[data[i].id] && dictionary_[data[i].id]=="true" )
+       {
+         console.log("Not pushing duplicate....");
+         continue;
+         
+       } 
+          dictionary_[data[i].id]="true";
+          data_temp.push(data[i]);
+ 
+     
+  }
+  data=data_temp;
+  //sort
     console.log("Sorting ... ");
    data.sort(function(tweet1,tweet2){
                                   var d1 = new Date(tweet1.created_at);
