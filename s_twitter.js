@@ -118,11 +118,21 @@ exports.transform_hashtags=function(tweet,json_obj)
 
 exports.transform_tweets_np=function(hashtags,tweet)
 {
-  console.log("transform_tweets -->"+JSON.stringify(tweet));
+  console.log("transform_tweets_np -->"+JSON.stringify(tweet));
   var json_obj = {};
   var media_array=[];
   var used_hashtags =[];
-  
+  console.log("transform_tweets_np");
+  if(tweet && (!tweet.dummy)){
+    console.log("transform_tweets_np::Tweet not dummy.");
+  }
+  if(tweet && tweet.message)
+    {
+      console.log("transform_tweets_np::Tweet message found.");
+    }
+  if(!tweet){
+    console.log("Tweet is not defined.");
+  }
   if(tweet && (!tweet.dummy))
   {
     if(tweet.message)
@@ -197,6 +207,7 @@ exports.transform_tweets_np=function(hashtags,tweet)
       
        
   }
+  console.log("TRANSLATEDTO::"+JSON.stringify(json_obj));
   return json_obj;
    
 }
@@ -355,8 +366,19 @@ exports.search_multiple=function(cnt, hashtags,db_handle,client)
                                                   console.log("insert to twitter tweets - running ");
                                                  statuses.forEach(function(status){
                                                    console.log("twitter status pushed " ); 
-                                                    queue_of_parse_tasks.push(exports.transform_tweets_np(hashtags,status));
-                                                 }) ; 
+  if(!status.dummy)
+  {
+  //  console.log("TRANSLATING::"+JSON.stringify(status));
+    queue_of_parse_tasks.push(exports.transform_tweets_np(hashtags,status));
+  }
+//   else{
+//   //  console.log("DUMMY::"+JSON.stringify(status));
+//   }
+     }) ; 
+                              console.log("queue_of_parse_tasks::pushing ");
+                              queue_of_parse_tasks.forEach(function(q_){
+                                console.log("Pushing::"+JSON.stringify(q_));
+                              });
                                                 deferred.resolve(queue_of_parse_tasks);                          
                                                  
                      }); 

@@ -86,7 +86,7 @@ exports.transform_ig=function(hashtags,post)
   var media_array=[];
   var used_hashtags =[];
   var deferred = Q.defer();  
-  if(post)
+  if(post && (!post.dummy))
   {   
        
            json_obj.gen_url= post.link; 
@@ -198,7 +198,11 @@ exports.search_multiple_ig=function(cnt, hashtags,db_handle)
                              if(instagram_._id)
                              {
                                 console.log("Mongo Instagram push item ");
-                                queue_of_parse_tasks.push(  exports.transform_ig(hashtags,instagram_)  );
+                               if(!instagram_.dummy)
+                                 {
+                                   queue_of_parse_tasks.push(  exports.transform_ig(hashtags,instagram_)  );
+                                 }
+                                
                              }
                              else
                              {
@@ -206,10 +210,15 @@ exports.search_multiple_ig=function(cnt, hashtags,db_handle)
                                var stored_=mongo_aa[instagram_.id];
                                if(!stored_)
                                { 
-                                 console.log("Inserting instagram pushing "+instagram_.id);
-                                // collection.insert(instagram_);
-                                 s_mongo_util.insert_instagram(  hashtags, instagram_ );
-                                 queue_of_parse_tasks.push(  exports.transform_ig(hashtags,instagram_)  );
+                                 
+                                 if(!instagram_.dummy)
+                                   {
+                                     console.log("Inserting instagram pushing "+instagram_.id);
+                                
+                                     s_mongo_util.insert_instagram(  hashtags, instagram_ );
+                                     queue_of_parse_tasks.push(  exports.transform_ig(hashtags,instagram_)  );
+                                   }
+                                 
 
                                }
                                else{

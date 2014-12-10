@@ -115,20 +115,31 @@ rank = function(conf_obj)
                                  } 
                                  return d2-d1;
                             });
-  var LOAD_WEIGHT_HASHTAG = 10000000000000;
+    var LOAD_WEIGHT_HASHTAG = 10000000000000;
+  var LOAD_WEIGHT_MEDIA= 10000000000;
+  var LOAD_WEIGHT_TEXT=  100000000;
   var rank_value_date=data.length;
  
-  data.forEach(function(tweet){ 
+  data.forEach(function(tweet){
         tweet.ranking =rank_value_date;
+        if(tweet.text_str)
+        {   
+            tweet.ranking=tweet.ranking+LOAD_WEIGHT_TEXT;    
+        }
+        if(tweet.media)
+        {  
+           tweet.ranking=tweet.ranking+(LOAD_WEIGHT_MEDIA*tweet.media.length );
+        }
         if(tweet.hashtags && hashtag_array)
         { 
        
           var intersection_ = _.intersection(tweet.hashtags,hashtag_array);
+          console.log("Intersection is "+JSON.stringify(intersection_)+" FROM "+JSON.stringify(tweet.hashtags)+" vs. "+JSON.stringify(hashtag_array));
           tweet.matching_hashtags=intersection_; 
           tweet.ranking=tweet.ranking+(LOAD_WEIGHT_HASHTAG*tweet.matching_hashtags.length);   
         } 
         rank_value_date--;
-  }); 
+  });
   data.sort(function(t1,t2){
       if(rank_sort_asc)
       {
@@ -253,7 +264,7 @@ search_social_media = function(db_handle, client,  count_, hashes_)
                                       });
                                      console.log("ITEM_ IS "+JSON.stringify(item_)+" "+item_.length);
                                  });
-       console.log("Media Item Array :: Search :: "+JSON.stringify(media_item_array_));
+      // console.log("Media Item Array :: Search :: "+JSON.stringify(media_item_array_));
                             var conf_obj = {data: media_item_array_ , date_sort_asc: false,  hashtags: hashes_, rank_sort_asc: false};
          
                             rank(conf_obj).then(function(data_ranked){ 
@@ -341,7 +352,18 @@ router.get('/socialmedia/:hashes', function(req,res){
      //search social media
     search_social_media(db,client, 100,hashes_).then(function(full_data){
             console.log("Promises fulfilled -- twitter/instagram");
-          res.jsonp(full_data);//return all data
+            var full_data_filtered=[];
+          if(full_data && full_data.length>0)
+            {
+                full_data.forEach(function(data){ 
+                      full_data_filtered.push(data); 
+                });
+            }
+            else
+              {
+                console.log("Filter out item...");
+              }
+          res.jsonp(full_data_filtered);//return all data
     });
   }
   else {
