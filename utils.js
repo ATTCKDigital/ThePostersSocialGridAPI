@@ -197,11 +197,14 @@ exports.find_all  = function(type,db_handle)
   });
   return deferred.promise;
 }
+ 
 exports.find_selected  = function(hashes,type,db_handle)
 {
-  console.log("find_selected::"+JSON.stringify(hashes));
-  if(hashes && hashes.length==1 && hashes[0]=='all')
+  console.log("find_selected::"+JSON.stringify(hashes)); 
+  
+  if(hashes && hashes.length==1 &&  ( hashes[0]=='all' || typeof hashes[0]==='undefined' || hashes[0]===null || hashes[0].trim()==='') )
   {
+    console.log("Finding all hashes");
     return exports.find_all(type,db_handle);
   }
   else
@@ -215,14 +218,24 @@ exports.find_selected  = function(hashes,type,db_handle)
               var  _key=type+'.'+item;
               var collection = db_handle.get(_key);
               console.log("Searching "+type+" "+_key );
-              collection.find({},function(err,items){
-                  items.forEach(function(item_){
-                    all_items.push(item_);
-                  })
-              }).then(function(){
+              var trimmedKey = _key.trim();
+              
+              if(typeof _key !=='undefined' && _key !== null && trimmedKey !== ''){
+                      collection.find({},function(err,items){
+                      if(typeof items !=='undefined' && items !==null){
+                          items.forEach(function(item_){
+                          all_items.push(item_);
+                        });
+                      }
 
-                   deferred.resolve(all_items);
-              });
+                    }).then(function(){
+
+                         deferred.resolve(all_items);
+                    });
+              }
+              else{
+                console.log(" Not searching for "+type+" "+_key);
+              }
 
            });
         }
@@ -237,7 +250,7 @@ exports.find_all_hashes=function(db_handle, hashes_)
   
   console.log("find_all_hashes -->"+JSON.stringify(hashes_));
    var collection = db_handle.get('search_hashes'); 
-  if(hashes_)
+  if(typeof hashes_!=='undefined' && hashes_!==null)
     {
        collection.find(hashes_,function(err,items){
          if(items){
@@ -250,6 +263,7 @@ exports.find_all_hashes=function(db_handle, hashes_)
     }
     else
     {
+      console.log("Finding all hashes as arguments are undefined.");
       collection.find({},function(err,items){
         if(items){
           deferred.resolve(items);

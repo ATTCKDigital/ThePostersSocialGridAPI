@@ -35,25 +35,25 @@ exports.add_stream_filter=function(  hashtag)
         {
               reformatted_hashtag_= hashtag;
         }
-    console.log("stream::Stream twitter "+hashtag);
+  //  console.log("stream::Stream twitter "+hashtag);
        var stream_= (exports.get_twitter_obj()).stream('statuses/filter', { track:hashtag }, function(stream)
         {
           console.log("stream:: Stream activated.");
         });
-    console.log("stream::created");
+//    console.log("stream::created");
       if(stream_)
         {
-          console.log("stream::Stream has been created successfully.");
+         // console.log("stream::Stream has been created successfully.");
                   stream_.on('tweet',function(t){
-                    console.log("stream::Tweet fed on stream  hashtag"+JSON.stringify(hashtag));
-                    console.log("stream::Tweet fed on stream "+JSON.stringify(t));
+                //    console.log("stream::Tweet fed on stream  hashtag"+JSON.stringify(hashtag));
+               //     console.log("stream::Tweet fed on stream "+JSON.stringify(t));
                     var tweets_ = []; 
                     var hashtags_=[];
                     tweets_.push(t);
                     hashtags_.push(hashtag);
-                    console.log("Getting db ids for "+JSON.stringify(tweets_));
+          //          console.log("Getting db ids for "+JSON.stringify(tweets_));
                     var mongo_aa = s_mongo_util.get_db_ids(tweets_);
-                    console.log("stream::Inserting "+JSON.stringify(t));
+            //        console.log("stream::Inserting "+JSON.stringify(t));
                     s_mongo_util.insert_twitter(tweets_ , hashtag , mongo_aa); 
                   });
         }
@@ -61,7 +61,7 @@ exports.add_stream_filter=function(  hashtag)
           console.log("stream::Stream unsucessful.");
         }
 
-        console.log("Steam for reformatted_hashtag_=="+reformatted_hashtag_);
+ //       console.log("Steam for reformatted_hashtag_=="+reformatted_hashtag_);
   } 
 }
 exports.t_count=function()
@@ -77,17 +77,23 @@ exports.search=function( cnt , hashtag  )
 {
    var deferred = Q.defer();
     console.log("exports.search("+hashtag+")");
-    (exports.get_twitter_obj()).get('search/tweets', { q:  hashtag , count: cnt }, function(err, data, response) {
-        if(err){
-          console.log("Error on twitter search...");
-          console.log(JSON.stringify(err));
-          deferred.reject(err);
-        }
-        else{ 
-        deferred.resolve(data);
-        }
-       
-    });
+    if(typeof hashtag !=='undefined' && hashtag !== null && hashtag !== '' && hashtag !== '#'){
+          (exports.get_twitter_obj()).get('search/tweets', { q:  hashtag , count: cnt }, function(err, data, response) {
+            if(err){
+              console.log("Error on twitter search...");
+              console.log(JSON.stringify(err));
+              deferred.reject(err);
+            }
+            else{ 
+            deferred.resolve(data);
+            }
+
+        });
+    }
+    else{
+      console.log( 'exports.search('+hashtag+') nothing returned');
+      deferred.resolve( [] );
+    }
     return  deferred.promise;
 }
 exports.transform_hashtags=function(tweet,json_obj)
@@ -305,7 +311,7 @@ exports.transform_tweets=function(hashtags,tweet)
 
 exports.search_db=function(cnt,hashtags,db_handle)
 {
-   console.log("search_db");
+   console.log("search_db "+JSON.stringify(hashtags));
   var deferred = Q.defer();//promise to return all data.
   if(hashtags)
   {

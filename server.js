@@ -242,7 +242,7 @@ delete_hash=function(db_handle,name_)
       }
     });
     return deferred.promise;
-} 
+} ;
 search_social_media = function(db_handle, client,  count_, hashes_)
 {
     var deferred = Q.defer();//promise to return all data.
@@ -358,23 +358,54 @@ router.get('/socialmedia/:hashes', function(req,res){
       var reformatted_=utils.reformatHash(hash); 
             mod_hashtags.push(reformatted_);
       }); 
-    
-     //search social media
-    search_social_media(db,client, 100,hashes_).then(function(full_data){
-            console.log("Promises fulfilled -- twitter/instagram");
-            var full_data_filtered=[];
-          if(full_data && full_data.length>0)
-            {
-                full_data.forEach(function(data){ 
-                      full_data_filtered.push(data); 
-                });
-            }
-            else
-              {
-                console.log("Filter out item...");
-              }
-          res.jsonp(full_data_filtered);//return all data
-    });
+     console.log("Reformatted hashes is "+JSON.stringify(hashes_));
+    if(hashes_!==null && typeof hashes_!== 'undefined' && hashes_.length ===1 && hashes_[0]==='#'){
+              var saved_hash_arr_=[];
+           saved_hash_arr_.push(utils.find_all_hashes(req.db));
+            Q.all(saved_hash_arr_).then(function(ful){
+              var allhashes=[];
+                 ful.forEach(function(allHashItems){
+                   allHashItems.forEach(function(hashItem){
+                           console.log("Hash item "+JSON.stringify(hashItem));
+                          var reformatted_=utils.reformatHash(hashItem.hash); 
+                          allhashes.push(reformatted_);
+                   }); 
+                 });
+                    search_social_media(db,client, 100,allhashes).then(function(full_data){
+                          console.log("Promises fulfilled -- twitter/instagram");
+                          var full_data_filtered=[];
+                        if(full_data && full_data.length>0)
+                          {
+                              full_data.forEach(function(data){ 
+                                    full_data_filtered.push(data); 
+                              });
+                          }
+                          else
+                            {
+                              console.log("Filter out item...");
+                            }
+                        res.jsonp(full_data_filtered);//return all data
+                  });
+            });
+    }
+    else{
+                 search_social_media(db,client, 100,hashes_).then(function(full_data){
+                      console.log("Promises fulfilled -- twitter/instagram");
+                      var full_data_filtered=[];
+                    if(full_data && full_data.length>0)
+                      {
+                          full_data.forEach(function(data){ 
+                                full_data_filtered.push(data); 
+                          });
+                      }
+                      else
+                        {
+                          console.log("Filter out item...");
+                        }
+                    res.jsonp(full_data_filtered);//return all data
+              });
+    }
+   
   }
   else {
       console.log('no hashes found.');

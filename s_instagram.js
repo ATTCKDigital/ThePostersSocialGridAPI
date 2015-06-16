@@ -21,7 +21,7 @@ exports.reformatHashIg = function(original_hash)
     
 exports.search_db_ig=function(cnt,hashtags,db_handle)
 {
-   console.log("search_db_ig");
+//    console.log("search_db_ig");
   var deferred = Q.defer();//promise to return all data.
   if(hashtags)
   {
@@ -69,14 +69,20 @@ exports.add_stream_filter_ig=function(db_handle, hashtag)
 }
 exports.search_ig=function( cnt , hashtag  )
 {
-  
+
   var reformatted_hashtag_  = exports.reformatHashIg(hashtag);
   
    var deferred = Q.defer();
-    ig.tag_media_recent(reformatted_hashtag_, function(err, medias, pagination, remaining, limit) { 
+    if(typeof cnt ==='undefined' || typeof hashtag ==='undefined'){
+          deferred.reject("Error, count or hashtag is undefined"); 
+    }    
+    else {
+          ig.tag_media_recent(reformatted_hashtag_, function(err, medias, pagination, remaining, limit) { 
      
-      deferred.resolve(medias);
-    });
+          deferred.resolve(medias);
+        });
+    }
+
     return  deferred.promise;
 }
 exports.transform_ig=function(hashtags,post)
@@ -162,17 +168,31 @@ exports.search_multiple_ig=function(cnt, hashtags,db_handle)
   console.log("search_multiple_ig::");
   var deferred = Q.defer();//promise to return all data.
   var collection=db_handle.get("instagram");
-  if(hashtags)
+  if(hashtags && typeof hashtags !=='undefined' && hashtags !==null && hashtags.length > 0)
     {
       var queue_of_tasks = [];
       var queue_of_parse_tasks = [];
       var ig_ids=[];
       var mongo_aa={};
+
       hashtags.forEach(function(hashtag)
       {
-       // console.log("Instagram Searching "+hashtag);
-        queue_of_tasks.push(  exports.search_ig( cnt,hashtag ));  
-        queue_of_tasks.push(  exports.search_db_ig( cnt, [hashtag],db_handle ));  
+         // console.log("Instagram Searching "+hashtag);
+        var hashtagArray = hashtag.split(" ");
+        if(hashtagArray.length > 1){
+                    hashtagArray.forEach(function(ht){
+                      if(typeof ht !== undefined && ht !== null && ht.trim()!==''){
+                             queue_of_tasks.push(  exports.search_ig( cnt,ht ) ) ;
+                              queue_of_tasks.push(  exports.search_db_ig( cnt, [ht],db_handle ));  
+                      }
+                           
+                    });
+        }
+        else{
+                    queue_of_tasks.push(  exports.search_ig( cnt,hashtag ) ) ;
+                    queue_of_tasks.push(  exports.search_db_ig( cnt, [hashtag],db_handle ));  
+        }
+
       });
          Q.all(queue_of_tasks).then(function(igs){ 
            if(igs && igs.length>0)
