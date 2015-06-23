@@ -6,6 +6,7 @@ var Q =          require('q');
 var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 
+var redis = require('redis');
 var _ = require("underscore");
 var mongo = require('mongodb');
 var monk = require('monk');
@@ -14,7 +15,9 @@ var mubsub = require('mubsub');
 var client = mubsub('mongodb://tpapi:tpapi@linus.mongohq.com:10002/app29194626');
 
 
-
+var redisClient = redis.createClient(19773,"pub-redis-19773.us-east-1-1.2.ec2.garantiadata.com", {no_ready_check: true});
+redisClient.auth("2Rbrl1mNfMX72gLL");
+var crontab = require('node-crontab'); 
 var s_twitter = require('./s_twitter');
 var s_instagram = require('./s_instagram');
 var utils = require('./utils');
@@ -39,6 +42,52 @@ app.use(function(req,res,next){
     req.mongo_client=client;
     next();
 });
+// redisClient.exists( '#' , function(err, reply) {
+//                 if (reply !== 1) {
+//                     redisClient.set( '#' ,  '' );
+//                 } 
+// }); 
+var tenMinCron = crontab.scheduleJob("*/200 * * * *", function(){ //This will call this function every 2 minutes 
+     var date_sort_asc_=false;
+      var rank_sort_asc_=false; 
+      var mod_hashtags=[];
+      var hashes_ =[];
+        console.log("Redis Client Cron Job Running!");
+       redisClient.keys('*', function (err, keys) {
+        if (err) return console.log(err); 
+        for(var i = 0, len = keys.length; i < len; i++) {
+          var hashKey = keys[i] ; 
+          var hashes_ = keys[i].split(",");
+                hashes_.forEach(function(hash){ 
+                var reformatted_=utils.reformatHash(hash); 
+                      mod_hashtags.push(reformatted_);
+                }); 
+                console.log("Crontab - Reloading key "+hashKey);
+               //search social media
+               search_social_media(db,client, 100,hashes_).then(function(full_data){
+                      console.log("Promises fulfilled -- twitter/instagram");
+                      var full_data_filtered=[];
+                    if(full_data && full_data.length>0)
+                      {
+                          full_data.forEach(function(data){ 
+                                full_data_filtered.push(data); 
+                          });
+                      }
+                      else
+                        {
+                          console.log("Filter out item...");
+                        }
+                     delete_redis(hashKey).then(function(statusValue){
+                       if(typeof full_data_filtered !=='undefined') {
+                         redisClient.set(hashKey,JSON.stringify(full_data_filtered.splice(0,50)) );
+                       }
+                          
+                     }); 
+              }); 
+        }
+       });
+    
+  });
 
 findHashesInRequestCount= function(requested_hashes, response_hashes)
 {
@@ -147,6 +196,24 @@ rank = function(conf_obj)
   deferred.resolve(data);
   return deferred.promise;
 }
+delete_redis=function(key){
+   var deferred=Q.defer();
+   var keyStatus={'id': key, status: 'deleted'};
+  if(typeof key !== 'undefined'){
+            redisClient.exists( key , function(err, reply) {
+                if (reply === 1) {
+                    redisClient.del( key , function(err,object){
+                       deferred.resolve(keyStatus);
+
+                    });
+                } else {
+                    keyStatus.status='Nothing found for '+key;
+                     deferred.resolve(keyStatus);
+                }
+            }); 
+  }
+  return deferred.promise;
+}
 save_all_hashes=function(db_handle, hashes_)
 {
   var init_stream_=false;
@@ -225,6 +292,66 @@ save_all_hashes=function(db_handle, hashes_)
     });
  
 }
+load_hashes=function(req){
+    var deferred = Q.defer();
+      var date_sort_asc_=false;
+      var rank_sort_asc_=false; 
+      var mod_hashtags=[];
+      var hashes_ =[];
+      var hashes_ = req.params.hashes.split(",");
+      hashes_.forEach(function(hash){ 
+      var reformatted_=utils.reformatHash(hash); 
+            mod_hashtags.push(reformatted_);
+      }); 
+     console.log("Reformatted hashes is "+JSON.stringify(hashes_));
+    if(hashes_!==null && typeof hashes_!== 'undefined' && hashes_.length ===1 && hashes_[0]==='#'){
+              var saved_hash_arr_=[];
+           saved_hash_arr_.push(utils.find_all_hashes(req.db));
+            Q.all(saved_hash_arr_).then(function(ful){
+              var allhashes=[];
+                 ful.forEach(function(allHashItems){
+                   allHashItems.forEach(function(hashItem){
+                           console.log("Hash item "+JSON.stringify(hashItem));
+                          var reformatted_=utils.reformatHash(hashItem.hash); 
+                          allhashes.push(reformatted_);
+                   }); 
+                 });
+                    search_social_media(db,client, 100,allhashes).then(function(full_data){
+                          console.log("Promises fulfilled -- twitter/instagram");
+                          var full_data_filtered=[];
+                        if(full_data && full_data.length>0)
+                          {
+                              full_data.forEach(function(data){ 
+                                    full_data_filtered.push(data); 
+                              });
+                          }
+                          else
+                            {
+                              console.log("Filter out item...");
+                            }
+                            deferred.resolve(full_data_filtered);//return all data
+                  });
+            });
+    }
+    else{
+                 search_social_media(db,client, 100,hashes_).then(function(full_data){
+                      console.log("Promises fulfilled -- twitter/instagram");
+                      var full_data_filtered=[];
+                    if(full_data && full_data.length>0)
+                      {
+                          full_data.forEach(function(data){ 
+                                full_data_filtered.push(data); 
+                          });
+                      }
+                      else
+                        {
+                          console.log("Filter out item...");
+                        }
+                        deferred.resolve(full_data_filtered);//return all data
+              });
+    }
+      return deferred.promise;
+}
 delete_hash=function(db_handle,name_)
 {
   console.log("delete_hash --> "+name_);
@@ -242,7 +369,7 @@ delete_hash=function(db_handle,name_)
       }
     });
     return deferred.promise;
-} ;
+} 
 search_social_media = function(db_handle, client,  count_, hashes_)
 {
     var deferred = Q.defer();//promise to return all data.
@@ -346,65 +473,37 @@ router.get('/socialmedia/hash/remove/:hash', function(req,res){
 });
 router.get('/socialmedia/:hashes', function(req,res){ 
   console.log(application_context+'/socialmedia'); 
-  var date_sort_asc_=false;
-  var rank_sort_asc_=false;
   
-  var mod_hashtags=[];
-  var hashes_ =[];
   if(req.params.hashes){
-      
-      hashes_ = req.params.hashes.split(",");
-      hashes_.forEach(function(hash){ 
-      var reformatted_=utils.reformatHash(hash); 
-            mod_hashtags.push(reformatted_);
-      }); 
-     console.log("Reformatted hashes is "+JSON.stringify(hashes_));
-    if(hashes_!==null && typeof hashes_!== 'undefined' && hashes_.length ===1 && hashes_[0]==='#'){
-              var saved_hash_arr_=[];
-           saved_hash_arr_.push(utils.find_all_hashes(req.db));
-            Q.all(saved_hash_arr_).then(function(ful){
-              var allhashes=[];
-                 ful.forEach(function(allHashItems){
-                   allHashItems.forEach(function(hashItem){
-                           console.log("Hash item "+JSON.stringify(hashItem));
-                          var reformatted_=utils.reformatHash(hashItem.hash); 
-                          allhashes.push(reformatted_);
-                   }); 
-                 });
-                    search_social_media(db,client, 100,allhashes).then(function(full_data){
-                          console.log("Promises fulfilled -- twitter/instagram");
-                          var full_data_filtered=[];
-                        if(full_data && full_data.length>0)
-                          {
-                              full_data.forEach(function(data){ 
-                                    full_data_filtered.push(data); 
-                              });
+         redisClient.exists(req.params.hashes,function(err,reply){
+                    if(reply===1) {
+                      redisClient.get(req.params.hashes, function(err,reply){
+                          if(typeof reply === undefined || reply === null || reply.length === 0) {
+                             console.log("Redis Miss - loading from "+req.params.hashes);
+                             load_hashes(req).then(function(responseValue){
+                               if(typeof responseValue !=='undefined') {
+                                 redisClient.set(req.params.hashes,JSON.stringify(responseValue.splice(0,50)) );
+                               } 
+                                 res.jsonp(responseValue);//return all data
+                             });
                           }
-                          else
-                            {
-                              console.log("Filter out item...");
-                            }
-                        res.jsonp(full_data_filtered);//return all data
-                  });
-            });
-    }
-    else{
-                 search_social_media(db,client, 100,hashes_).then(function(full_data){
-                      console.log("Promises fulfilled -- twitter/instagram");
-                      var full_data_filtered=[];
-                    if(full_data && full_data.length>0)
-                      {
-                          full_data.forEach(function(data){ 
-                                full_data_filtered.push(data); 
-                          });
-                      }
-                      else
-                        {
-                          console.log("Filter out item...");
-                        }
-                    res.jsonp(full_data_filtered);//return all data
-              });
-    }
+                          else {
+                            console.log("Redis Client Hit for key "+req.params.hashes);
+                            res.jsonp(JSON.parse(reply));//return all data
+                          }
+                      });
+                    }
+                    else {
+                        console.log("Redis Miss - loading from "+req.params.hashes);
+                        load_hashes(req).then(function(responseValue){
+                                 if(typeof responseValue !=='undefined') {
+                                     redisClient.set(req.params.hashes,JSON.stringify(responseValue.splice(0,50)) );
+                                 } 
+                                 res.jsonp(responseValue);//return all data
+                        });
+                    }
+         });
+  
    
   }
   else {
